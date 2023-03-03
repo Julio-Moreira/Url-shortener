@@ -11,14 +11,14 @@ The working of API program involves a backend database that stores the original 
 
 Basic API usage:
 + _WORKING IN PROGRESS_
-+ *you can access the (original documentation)[#] for see more features/endpoints*
++ *you can access the [#](original documentation) for see more features/endpoints*
 
 ## Technologies
 For this project I use: 
-1. **(php)[https://www.php.net]** with **(symfony)[https://symfony.com]** for code APIs
-2. **(pest)[https://pestphp.com]** for tests of app
-3. **(swagger)[https://swagger.io]** for documentation
+1. **[php](https://www.php.net)** with **[symfony](https://symfony.com)** for code APIs
+2. **[pest](https://pestphp.com)** for tests of app
+3. **[swagger](https://swagger.io)** for documentation
 4. *and more*
 
 *thank you for attention!*
-author: (Julio)[https://github.com/Julio-Moreira]
+author: [Julio](https://github.com/Julio-Moreira)

@@ -1,5 +1,8 @@
 <?php
 
+use PHPUnit\Framework\TestCase as FrameworkTestCase;
+use Tests\TestCase;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -11,7 +14,9 @@
 |
 */
 
-// uses(Tests\TestCase::class)->in('Feature');
+
+// uses(FrameworkTestCase::class)->in('Feature')->group('feature');
+
 
 /*
 |--------------------------------------------------------------------------

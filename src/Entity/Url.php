@@ -6,6 +6,10 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Uid\Ulid;
+use Endroid\QrCode\Color\Color;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelLow;
+use Endroid\QrCode\QrCode;
 
 #[ORM\Entity(repositoryClass: UrlRepository::class)]
 class Url
@@ -40,6 +44,17 @@ class Url
 
     private function generateShortUrlWithSuffix(string $suffixUrl): string { 
         return "$suffixUrl/{$this->id}";
+    }
+
+    public function generateQrCode()
+    {
+      return QrCode::create($this->shortUrl)
+          ->setEncoding(new Encoding('UTF-8'))
+          ->setErrorCorrectionLevel(new ErrorCorrectionLevelLow())
+          ->setSize(120)
+          ->setMargin(0)
+          ->setForegroundColor(new Color(0, 0, 0))
+          ->setBackgroundColor(new Color(255, 255, 255));
     }
 
     public function wasAccessedIn(\DateTimeImmutable $date = new \DateTimeImmutable()): void

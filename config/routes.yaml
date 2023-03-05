@@ -1,6 +1,19 @@
-controllers:
-    resource:
-        path: ../src/Controller/
-        namespace: App\Controller
-    type: attribute
+api_get_url:   
+    path: /api/url/{url}
+    controller: App\Controller\UrlController::show
+    methods: GET
 
+api_get_url_qr_code:
+    path: /api/url/{url}/qrCode
+    controller: App\Controller\UrlController::showQrCode
+    methods: GET
+
+api_store_url:
+    path: /api/url
+    controller: App\Controller\UrlController::store
+    methods: POST
+
+api_delete_url:
+    path: /api/url/{url}
+    controller: App\Controller\UrlController::destroy
+    methods: DELETE

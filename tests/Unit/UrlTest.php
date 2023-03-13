@@ -7,14 +7,14 @@ uses()->group('unit');
 
 dataset('url', [
     [
-        'url' => new Url("https://www.google.com", 'https://test'), 
-        'url2' => new Url("https://www.google.com", 'https://test') ]   
+        'url' => new Url("https://www.google.com", 'https://test', 'a'), 
+        'url2' => new Url("https://www.google.com", 'https://test', '') ]   
 ]);
 
 test('If url is correctly initializing generated', function(Url $url) {
     expect($url->completeUrl)->toBe("https://www.google.com");
-    expect($url->shortUrl)->toMatch("/https:\/\/test\/0x.{32,64}/");
-    expect($url->id)->toStartWith('0x');
+    expect($url->shortUrl)->toMatch("/https:\/\/test\/a\..{12}/");
+    expect($url->id)->toHaveLength(12);
     expect($url->createdAt)
         ->toBeInstanceOf(\DateTimeImmutable::class)
         ->not->toBe(new \DateTimeImmutable());
@@ -22,19 +22,16 @@ test('If url is correctly initializing generated', function(Url $url) {
 
 test('If access is correctly stored', function(Url $url) {
     $urlDate = new \DateTimeImmutable('5 seconds ago');
-    $url->wasAccessedIn($urlDate);
-    $url->wasAccessedIn();
-    $url->wasAccessedIn();
-    $urlAccesses = $url->accesses();
+    $url->wasAccessed($urlDate);
+    $url->wasAccessed();
+    $url->wasAccessed();
+    $urlAccesses = $url->lastAccesses();
 
     expect($urlAccesses->count())->toBe(3);
-    expect($urlAccesses->first())->toMatch("/..-..-.. \/ ..:..:../");
     expect($urlAccesses)->sequence(
-        fn($date) => $date->toBe($urlDate->format('y-m-d / G:i:s')),
-        fn($date) => $date->not->toBe(
-            (new \DateTimeImmutable())->format('y-m-d / G:i:s~u')
-        ),
-        fn($date) => $date->toMatch("/..-..-.. \/ ..:..:../"),
+        fn($date) => $date->toBe($urlDate->format(\DateTimeImmutable::W3C)),
+        fn($date) => $date->not->toBe(new \DateTimeImmutable()),
+        fn($date) => $date->toBeString(),
     );
 })->with('url');
 

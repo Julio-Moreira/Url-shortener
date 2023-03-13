@@ -3,66 +3,90 @@
 namespace App\Controller;
 
 use App\Entity\Url;
+use App\Entity\User;
 use App\Repository\UrlRepositoryInterface;
 use Endroid\QrCode\Writer\PngWriter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class UrlController extends AbstractController
 {
 
     public function __construct(
         private UrlRepositoryInterface $urlRepository,
-        private PngWriter $writer
+        private ValidatorInterface $validator,
+        private PngWriter $writer,
+        #[CurrentUser] private ?User $user,
     ) { }
 
-    public function show(Url $url): Response
+    public function show(string $labelWithId): Response
     {
-        $url->wasAccessedIn();
+        $url = $this->urlRepository->get($labelWithId);
+        if (is_null($url)) 
+            return new JsonResponse(['message' => 'short url not exist'], 404);
+
+        $url->wasAccessed();
         return new JsonResponse([
             'original_url' => $url->completeUrl,
             'short_url' => $url->shortUrl,
-            'created_at' => $url->createdAt->format('y-m-d / G:i:s'),
-            'total_accesses' => $url->accesses()->count()
+            'qr_code_url' => "{$url->shortUrl}/qrCode",
+            'total_accesses' => $url->lastAccesses()->count(),
+            'last_access' => $url->lastAccesses()->last(),
+            'created_at' => $url->createdAt->format(\DateTimeImmutable::W3C),
         ]);
     }
 
-    public function showQrCode(Url $url): Response
+    public function showQrCode(string $labelWithId, #[CurrentUser] ?User $user): Response
     {
-        $url->wasAccessedIn();
-        $urlQrCodeClass = $url->generateQrCode();
-        $qrCode = $this->writer->write(
-            $urlQrCodeClass
+        if (is_null($user))
+            return new JsonResponse(['message' => 'missing credentials'], Response::HTTP_UNAUTHORIZED);
+        
+        $url = $this->urlRepository->get($labelWithId);
+        if (is_null($url)) 
+            return new JsonResponse(['message' => 'short url not exist'], 404);
+            
+        $generatedQrCode = $url->generateQrCode();
+        $urlQrCode = $this->writer->write(
+            $generatedQrCode
         )->getDataUri();
 
-        return $this->render(
-            'qr_code_generator/index.html.twig', 
-            ['urlQrCode' => $qrCode]
-        );
+        $templatePath = 'qr_code_generator/index.html.twig';
+        return $this->render($templatePath, ['urlQrCode' => $urlQrCode]);
     }
 
     public function store(Request $request): Response
     {
+        $label = is_null($this->user) ? '' : $request->get('label');
         $url = new Url(
-            $request->get('url'), 
-            "{$this->getParameter('app_url')}/url"
+            $request->get('url'),
+            $this->getParameter('api_url'),
+            $label
         );
-        $this->urlRepository->save($url);
+        
+        $urlValidated = $this->validator->validate($url);
+        if (count($urlValidated) > 0)
+            return new JsonResponse(['message' => (string) $urlValidated], Response::HTTP_BAD_REQUEST);
 
+        $this->urlRepository->save($url);
         return new JsonResponse([
             'short_url' => $url->shortUrl,
             'original_url' => $url->completeUrl,
-            'created_at' => $url->createdAt->format('y-m-d / G:i:s')
+            'qr_code_url' => "{$url->shortUrl}/qrCode",
+            'created_at' => $url->createdAt->format(\DateTimeImmutable::W3C)
         ]);
     }
 
-    public function destroy(Url $url): Response
+    public function destroy(string $labelWithId): Response
     {
-        $this->urlRepository
-            ->remove($url);
+        if (is_null($this->user))
+            return new JsonResponse(['message' => 'missing credentials'], Response::HTTP_UNAUTHORIZED);
 
-        return new Response(status: 204);
+        $url = $this->urlRepository->get($labelWithId);
+        $this->urlRepository->remove($url);
+        return new Response(status: Response::HTTP_NO_CONTENT);
     }
 }

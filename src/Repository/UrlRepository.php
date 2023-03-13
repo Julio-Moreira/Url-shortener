@@ -21,8 +21,10 @@ class UrlRepository extends ServiceEntityRepository implements UrlRepositoryInte
         parent::__construct($registry, Url::class);
     }
 
-    public function get(string $id): Url
+    public function get(string $labelWithId): ?Url
     {
+        $id = explode('.', $labelWithId)[1];
+
         return $this
             ->findOneBy(['id' => $id]);
     }

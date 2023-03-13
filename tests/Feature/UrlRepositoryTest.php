@@ -14,6 +14,10 @@ beforeEach(function() {
     
     /** @var UrlRepository $urlRepository */
     $this->urlRepository = $entityManager->getRepository(Url::class);
+    $url = new Url('https://www.google.com', 'https://', 'a');
+    $url_2 = new Url('https://www.google.com', 'https://', 'd');
+    $this->urlRepository->save($url, false);
+    $this->urlRepository->save($url_2);
 });
 
 test("test if url is correctly get in db", function() {
@@ -26,13 +30,12 @@ test("test if url is correctly get in db", function() {
 });
 
 test("test if url is correctly save in db", function() {
-    $url = new Url('https://www.google.com', 'https://');
+    $url = new Url('https://www.google.com', 'https://', 'a');
     $this->urlRepository
         ->save($url, false);
 
     $allUrls = $this->urlRepository->findAll();
 
-    dd($allUrls);
     expect($allUrls)->sequence(
         fn($urlInDb) => $urlInDb->not->toBe($url),
         fn($urlInDb) => $urlInDb->not->toBe($url),

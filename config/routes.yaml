@@ -1,10 +1,23 @@
+api_login_check:
+    path: /api/login/token
+
+api_login_register:
+    path: /api/login/register
+    controller: App\Controller\LoginController::register
+    methods: POST
+
+api_login_delete:
+    path: /api/login/delete
+    controller: App\Controller\LoginController::delete
+    methods: DELETE
+
 api_get_url:   
-    path: /api/url/{url}
+    path: /api/url/{labelWithId}
     controller: App\Controller\UrlController::show
     methods: GET
 
 api_get_url_qr_code:
-    path: /api/url/{url}/qrCode
+    path: /api/url/{labelWithId}/qrCode
     controller: App\Controller\UrlController::showQrCode
     methods: GET
 
@@ -14,6 +27,6 @@ api_store_url:
     methods: POST
 
 api_delete_url:
-    path: /api/url/{url}
+    path: /api/url/{labelWithId}
     controller: App\Controller\UrlController::destroy
     methods: DELETE

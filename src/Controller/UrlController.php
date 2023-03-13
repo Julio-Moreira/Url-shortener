@@ -20,7 +20,6 @@ class UrlController extends AbstractController
         private UrlRepositoryInterface $urlRepository,
         private ValidatorInterface $validator,
         private PngWriter $writer,
-        #[CurrentUser] private ?User $user,
     ) { }
 
     public function show(string $labelWithId): Response
@@ -42,9 +41,6 @@ class UrlController extends AbstractController
 
     public function showQrCode(string $labelWithId, #[CurrentUser] ?User $user): Response
     {
-        if (is_null($user))
-            return new JsonResponse(['message' => 'missing credentials'], Response::HTTP_UNAUTHORIZED);
-        
         $url = $this->urlRepository->get($labelWithId);
         if (is_null($url)) 
             return new JsonResponse(['message' => 'short url not exist'], 404);
@@ -60,11 +56,10 @@ class UrlController extends AbstractController
 
     public function store(Request $request): Response
     {
-        $label = is_null($this->user) ? '' : $request->get('label');
         $url = new Url(
             $request->get('url'),
             $this->getParameter('api_url'),
-            $label
+            $request->get('label')
         );
         
         $urlValidated = $this->validator->validate($url);
@@ -82,9 +77,6 @@ class UrlController extends AbstractController
 
     public function destroy(string $labelWithId): Response
     {
-        if (is_null($this->user))
-            return new JsonResponse(['message' => 'missing credentials'], Response::HTTP_UNAUTHORIZED);
-
         $url = $this->urlRepository->get($labelWithId);
         $this->urlRepository->remove($url);
         return new Response(status: Response::HTTP_NO_CONTENT);

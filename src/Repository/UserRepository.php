@@ -17,7 +17,7 @@ use Symfony\Component\Security\Core\User\PasswordUpgraderInterface;
  * @method User[]    findAll()
  * @method User[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
-class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface
+class UserRepository extends ServiceEntityRepository implements PasswordUpgraderInterface, UserRepositoryInterface
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -28,19 +28,23 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
     {
         $this->getEntityManager()->persist($entity);
 
-        if ($flush) {
+        if ($flush) 
             $this->getEntityManager()->flush();
-        }
     }
 
     public function remove(User $entity, bool $flush = true): void
     {
         $this->getEntityManager()->remove($entity);
 
-        if ($flush) {
+        if ($flush) 
             $this->getEntityManager()->flush();
-        }
     }
+
+    public function get(string $email): ?User
+    {
+        return $this->findOneBy(['email' => $email]);
+    }
+
 
     /**
      * Used to upgrade (rehash) the user's password automatically over time.

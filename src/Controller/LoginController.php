@@ -3,7 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Repository\UserRepository;
+use App\Repository\UserRepositoryInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -14,7 +14,7 @@ class LoginController extends AbstractController
 {
     public function __construct(
         private UserPasswordHasherInterface $passwordHasher,
-        private UserRepository $userRepository,
+        private UserRepositoryInterface $userRepository,
     ) { }
     
     public function register(Request $request): Response
@@ -33,9 +33,10 @@ class LoginController extends AbstractController
 
     public function delete(Request $request)
     {
-        $user = $this->userRepository->findOneBy(['email' => $request->get('email')]);
-        if (is_null($user) || !$this->passwordHasher
-                                   ->isPasswordValid($user, $request->get('password')))
+        $user = $this->userRepository->get($request->get('email'));
+
+        $userPasswordIsValid = $this->passwordHasher->isPasswordValid($user, $request->get('password'));
+        if ($user === null || !$userPasswordIsValid) 
             return new JsonResponse(['message' => 'missing credentials'], Response::HTTP_UNAUTHORIZED);
         
         $this->userRepository->remove($user);

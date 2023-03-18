@@ -23,7 +23,8 @@ class UrlRepository extends ServiceEntityRepository implements UrlRepositoryInte
 
     public function get(string $labelWithId): ?Url
     {
-        $id = explode('.', $labelWithId)[1];
+        $strHasLabel = strpos($labelWithId, '.') >= 0;
+        $id = $strHasLabel ? $labelWithId : explode('.', $labelWithId, 1)[1];
 
         return $this
             ->findOneBy(['id' => $id]);
@@ -37,19 +38,33 @@ class UrlRepository extends ServiceEntityRepository implements UrlRepositoryInte
             $this->getEntityManager()->flush();
     }
 
-    public function remove(Url $entity, bool $flush = true): void
-    {
-        $this->getEntityManager()->remove($entity);
-
-        if ($flush)
-            $this->getEntityManager()->flush();
-    }
-
     public function removeById(string $id): void
     {
         $url = $this->getEntityManager()
             ->getPartialReference(Url::class, $id);
         $this->remove($url);
+    }
+
+    public function remove(Url $entity, bool $flush = true): void
+    {
+        $this->removeUrlInUser($entity);
+        $this->getEntityManager()->remove($entity);
+
+        if ($flush)
+            $this->getEntityManager()->flush();
+    }
+    
+    private function removeUrlInUser(Url $entity): void
+    {
+        if ($this->urlHasUser($entity)) {
+            $user = $entity->getUser();
+            $user->removeUrl($entity);
+        }
+    }
+
+    private function urlHasUser(Url $url): bool
+    {
+        return is_null($url->getUser());
     }
 
 //    /**

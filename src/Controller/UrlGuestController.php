@@ -33,8 +33,7 @@ class UrlGuestController extends AbstractController
 
     public function store(Request $request): Response
     {
-        $url = new Url(
-            $request->get('url'), $this->getParameter('api_guest_url'), '');
+        $url = new Url($request->get('url'), $this->getParameter('api_guest_url'));
         
         $urlViolations = $this->validator->validate($url);
         if ($urlViolations->count() > 0)

@@ -3,14 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\Url;
-use App\Entity\User;
 use App\Repository\UrlRepositoryInterface;
+use App\Repository\UserRepositoryInterface;
 use Endroid\QrCode\Writer\PngWriter;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Security\Http\Attribute\CurrentUser;
+use Symfony\Component\Validator\ConstraintViolationList;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class UrlController extends AbstractController
@@ -18,67 +18,73 @@ class UrlController extends AbstractController
 
     public function __construct(
         private UrlRepositoryInterface $urlRepository,
+        private UserRepositoryInterface $userRepository,
         private ValidatorInterface $validator,
         private PngWriter $writer,
     ) { }
 
-    public function show(string $labelWithId): Response
+    public function index(Request $request): Response
     {
-        $url = $this->urlRepository->get($labelWithId);
-        if (is_null($url)) 
-            return new JsonResponse(['message' => 'short url not exist'], 404);
+        $user = $this->userRepository->get($request->get('email'));
+        $userUrls = array_map(
+            fn(Url $url) => $url->shortUrl, 
+            $user->getUrls()->toArray());
 
-        $url->wasAccessed();
-        return new JsonResponse([
-            'original_url' => $url->completeUrl,
-            'short_url' => $url->shortUrl,
-            'qr_code_url' => "{$url->shortUrl}/qrCode",
-            'total_accesses' => $url->lastAccesses()->count(),
-            'last_access' => $url->lastAccesses()->last(),
-            'created_at' => $url->createdAt->format(\DateTimeImmutable::W3C),
-        ]);
+        return new JsonResponse($userUrls);
     }
 
-    public function showQrCode(string $labelWithId, #[CurrentUser] ?User $user): Response
+    public function show(string $shortUrl): Response
     {
-        $url = $this->urlRepository->get($labelWithId);
+        $url = $this->urlRepository->get($shortUrl);
         if (is_null($url)) 
-            return new JsonResponse(['message' => 'short url not exist'], 404);
-            
-        $generatedQrCode = $url->generateQrCode();
-        $urlQrCode = $this->writer->write(
-            $generatedQrCode
-        )->getDataUri();
+            return new JsonResponse(
+                ['message' => 'short url not exist'], Response::HTTP_NOT_FOUND);
 
-        $templatePath = 'qr_code_generator/index.html.twig';
-        return $this->render($templatePath, ['urlQrCode' => $urlQrCode]);
+        $url->wasAccessed();
+        return new JsonResponse($url->toArray());
+    }
+
+    public function showQrCode(string $shortUrl): Response
+    {
+        $url = $this->urlRepository->get($shortUrl);
+        if (is_null($url)) 
+            return new JsonResponse(
+                ['message' => 'short url not exist'], Response::HTTP_NOT_FOUND);
+
+        $urlQrCode = $url->generateUrlQrCode($this->writer);
+        return $this->render(
+            'qr_code_generator/index.html.twig', compact($urlQrCode));
     }
 
     public function store(Request $request): Response
     {
+        $user = $this->userRepository->get($request->get('email'));
         $url = new Url(
-            $request->get('url'),
-            $this->getParameter('api_url'),
-            $request->get('label')
-        );
+            $request->get('url'), $this->getParameter('api_url'), 
+            $request->get('label'), $user);
         
-        $urlValidated = $this->validator->validate($url);
-        if (count($urlValidated) > 0)
-            return new JsonResponse(['message' => (string) $urlValidated], Response::HTTP_BAD_REQUEST);
+        $urlViolations = $this->validator->validate($url);
+        if ($urlViolations->count() > 0)
+            return new JsonResponse(
+                $this->generateArrayOfViolationsMessages($urlViolations), Response::HTTP_BAD_REQUEST);
 
         $this->urlRepository->save($url);
-        return new JsonResponse([
-            'short_url' => $url->shortUrl,
-            'original_url' => $url->completeUrl,
-            'qr_code_url' => "{$url->shortUrl}/qrCode",
-            'created_at' => $url->createdAt->format(\DateTimeImmutable::W3C)
-        ]);
+        return new JsonResponse($url->toArray());
     }
 
-    public function destroy(string $labelWithId): Response
+    private function generateArrayOfViolationsMessages(ConstraintViolationList $violations): array
     {
-        $url = $this->urlRepository->get($labelWithId);
+        $violationsMessage = [];
+        foreach ($violations as $violation)
+            $violationsMessage[] = $violation->getMessage();
+        
+        return $violationsMessage;
+    }
+
+    public function destroy(string $shortUrl): Response
+    {
+        $url = $this->urlRepository->get($shortUrl);
         $this->urlRepository->remove($url);
-        return new Response(status: Response::HTTP_NO_CONTENT);
+        return new JsonResponse(status: Response::HTTP_NO_CONTENT);
     }
 }
